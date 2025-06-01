@@ -3,411 +3,614 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepSite - Testeur Numérique Intelligent</title>
+    <title>Gestion des Tests - Boîtiers Électroniques</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .sidebar {
             transition: all 0.3s ease;
         }
-        .chart-container {
-            height: 300px;
+        .sidebar-collapsed {
+            width: 70px;
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                position: absolute;
-                left: -100%;
-                z-index: 50;
-            }
-            .sidebar.active {
-                left: 0;
-            }
+        .sidebar-collapsed .nav-text {
+            display: none;
         }
-        .blink-warning {
-            animation: blink 1.5s infinite;
+        .sidebar-collapsed .logo-text {
+            display: none;
         }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .sidebar-expanded {
+            width: 250px;
+        }
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        .test-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
-    <!-- Login Page (Default Visible) -->
-    <div id="loginPage" class="min-h-screen flex items-center justify-center bg-gray-900">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <div class="text-center mb-8">
-                <img src="https://via.placeholder.com/80" alt="DeepSite Logo" class="mx-auto mb-4 rounded-lg">
-                <h1 class="text-3xl font-bold text-gray-800">DeepSite</h1>
-                <p class="text-gray-600">Testeur Numérique Intelligent</p>
-            </div>
-            <form id="loginForm" class="space-y-4">
-                <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Nom d'utilisateur</label>
-                    <input type="text" id="username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="remember" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="remember" class="ml-2 block text-sm text-gray-700">Se souvenir de moi</label>
-                    </div>
-                    <a href="#" class="text-sm text-blue-600 hover:underline">Mot de passe oublié?</a>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center">
-                    <i class="fas fa-sign-in-alt mr-2"></i> Connexion
-                </button>
-            </form>
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600">Version 1.0.0 - © 2023 COFAT</p>
-            </div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-gray-700">Chargement en cours...</p>
         </div>
     </div>
 
-    <!-- Main App (Hidden by Default) -->
-    <div id="appContainer" class="hidden min-h-screen">
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Connexion Technicien</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-700 mb-2">Identifiant</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 mb-2">Mot de passe</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">Se connecter</button>
+            </form>
+            <div id="loginError" class="mt-4 text-red-500 hidden">Identifiant ou mot de passe incorrect</div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="flex h-screen">
         <!-- Sidebar -->
-        <div class="sidebar bg-gray-800 text-white w-64 fixed h-full overflow-y-auto">
-            <div class="p-4 flex items-center space-x-3 border-b border-gray-700">
-                <img src="https://via.placeholder.com/40" alt="User" class="rounded-full">
-                <div>
-                    <p class="font-medium" id="usernameDisplay">Technicien</p>
-                    <p class="text-xs text-gray-400" id="userRoleDisplay">Maintenance</p>
-                </div>
+        <div id="sidebar" class="sidebar bg-gray-800 text-white sidebar-expanded flex flex-col">
+            <div class="p-4 flex items-center">
+                <i class="fas fa-microchip text-2xl mr-3"></i>
+                <span class="logo-text text-xl font-semibold">TestBoîtiers</span>
             </div>
-            <nav class="p-4">
-                <div class="mb-6">
-                    <p class="text-xs uppercase text-gray-400 mb-2">Principal</p>
-                    <a href="#" class="flex items-center space-x-2 py-2 px-3 rounded-lg bg-gray-700 text-white">
-                        <i class="fas fa-tachometer-alt w-5"></i>
-                        <span>Tableau de bord</span>
-                    </a>
-                </div>
-                <div class="mb-6">
-                    <p class="text-xs uppercase text-gray-400 mb-2">Tests</p>
-                    <a href="#" class="flex items-center space-x-2 py-2 px-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
-                        <i class="fas fa-bolt w-5"></i>
-                        <span>Résultats des tests</span>
-                    </a>
-                    <a href="#" class="flex items-center space-x-2 py-2 px-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
-                        <i class="fas fa-chart-line w-5"></i>
-                        <span>Statistiques</span>
-                    </a>
-                    <a href="#" class="flex items-center space-x-2 py-2 px-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
-                        <i class="fas fa-history w-5"></i>
-                        <span>Historique</span>
-                    </a>
-                </div>
-                <div class="mb-6">
-                    <p class="text-xs uppercase text-gray-400 mb-2">Gestion</p>
-                    <a href="#" class="flex items-center space-x-2 py-2 px-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
-                        <i class="fas fa-cog w-5"></i>
-                        <span>Paramètres</span>
-                    </a>
-                    <a href="#" class="flex items-center space-x-2 py-2 px-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
-                        <i class="fas fa-users w-5"></i>
-                        <span>Utilisateurs</span>
-                    </a>
-                </div>
-            </nav>
-            <div class="p-4 border-t border-gray-700 absolute bottom-0 w-full">
-                <button id="logoutBtn" class="flex items-center space-x-2 text-gray-300 hover:text-white w-full">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Déconnexion</span>
+            <div class="flex-grow overflow-y-auto">
+                <nav>
+                    <ul>
+                        <li>
+                            <a href="#" id="dashboardLink" class="flex items-center p-4 hover:bg-gray-700 transition duration-200">
+                                <i class="fas fa-tachometer-alt mr-3"></i>
+                                <span class="nav-text">Tableau de bord</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" id="newTestLink" class="flex items-center p-4 hover:bg-gray-700 transition duration-200">
+                                <i class="fas fa-plus-circle mr-3"></i>
+                                <span class="nav-text">Nouveau test</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" id="historyLink" class="flex items-center p-4 hover:bg-gray-700 transition duration-200">
+                                <i class="fas fa-history mr-3"></i>
+                                <span class="nav-text">Historique</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" id="reportsLink" class="flex items-center p-4 hover:bg-gray-700 transition duration-200">
+                                <i class="fas fa-file-alt mr-3"></i>
+                                <span class="nav-text">Rapports</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" id="settingsLink" class="flex items-center p-4 hover:bg-gray-700 transition duration-200">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span class="nav-text">Paramètres</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="p-4 border-t border-gray-700">
+                <button id="toggleSidebar" class="flex items-center text-gray-300 hover:text-white">
+                    <i class="fas fa-chevron-left mr-2"></i>
+                    <span class="nav-text">Réduire</span>
                 </button>
             </div>
         </div>
 
-        <!-- Mobile Header -->
-        <div class="md:hidden bg-gray-800 text-white p-4 flex justify-between items-center">
-            <button id="sidebarToggle" class="text-white focus:outline-none">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
-            <h1 class="text-xl font-bold">DeepSite</h1>
-            <div class="w-8"></div> <!-- Spacer for alignment -->
-        </div>
-
         <!-- Main Content -->
-        <div class="md:ml-64">
-            <!-- Header -->
-            <header class="bg-white shadow-sm hidden md:block">
-                <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                    <h1 class="text-2xl font-semibold text-gray-900">Tableau de bord</h1>
+        <div id="mainContent" class="main-content flex-1 overflow-y-auto ml-0">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow-sm">
+                <div class="flex justify-between items-center p-4">
+                    <div class="flex items-center">
+                        <button id="mobileMenuButton" class="md:hidden mr-4 text-gray-600">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h1 id="pageTitle" class="text-xl font-semibold text-gray-800">Tableau de bord</h1>
+                    </div>
                     <div class="flex items-center space-x-4">
                         <div class="relative">
-                            <button id="notificationsBtn" class="text-gray-500 hover:text-gray-700 focus:outline-none relative">
+                            <button id="notificationsButton" class="text-gray-600 hover:text-gray-900 relative">
                                 <i class="fas fa-bell text-xl"></i>
                                 <span class="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
                             </button>
-                            <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg z-10">
-                                <div class="p-4 border-b">
-                                    <p class="font-medium">Notifications</p>
-                                </div>
-                                <div class="max-h-60 overflow-y-auto">
-                                    <a href="#" class="block px-4 py-3 border-b hover:bg-gray-50">
-                                        <p class="text-sm font-medium">Nouveau défaut critique détecté</p>
-                                        <p class="text-xs text-gray-500">Broche #12 - Court-circuit</p>
-                                    </a>
-                                    <a href="#" class="block px-4 py-3 border-b hover:bg-gray-50">
-                                        <p class="text-sm font-medium">Test terminé avec succès</p>
-                                        <p class="text-xs text-gray-500">Boîtier #B-2456</p>
-                                    </a>
-                                </div>
-                                <div class="p-2 text-center bg-gray-50">
-                                    <a href="#" class="text-sm text-blue-600 hover:underline">Voir toutes</a>
-                                </div>
+                            <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Nouveau test assigné</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Rapport approuvé</a>
                             </div>
                         </div>
                         <div class="relative">
-                            <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none">
-                                <img src="https://via.placeholder.com/32" alt="User" class="rounded-full">
-                                <i class="fas fa-chevron-down text-xs"></i>
+                            <button id="userMenuButton" class="flex items-center text-gray-600 hover:text-gray-900">
+                                <span id="usernameDisplay" class="mr-2">Technicien</span>
+                                <i class="fas fa-user-circle text-2xl"></i>
                             </button>
-                            <div id="userMenuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                            <div id="userMenuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
-                                <div class="border-t">
-                                    <a href="#" id="logoutBtnMobile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Déconnexion</a>
-                                </div>
+                                <a href="#" id="logoutButton" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Déconnexion</a>
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <!-- Main Content Area -->
-            <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <!-- Critical Alerts -->
-                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r flex justify-between items-center blink-warning">
-                    <div>
-                        <p class="font-bold">Alerte Critique</p>
-                        <p>Défaut détecté sur broche #12 - Court-circuit</p>
-                    </div>
-                    <button class="text-red-700 hover:text-red-900">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white shadow rounded-lg p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-gray-500">Tests aujourd'hui</p>
-                                <p class="text-2xl font-semibold text-gray-900">24</p>
+            <!-- Dashboard Content -->
+            <div id="dashboardContent" class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                                <i class="fas fa-check-circle text-xl"></i>
                             </div>
-                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                                <i class="fas fa-bolt"></i>
+                            <div>
+                                <p class="text-gray-500">Tests réussis</p>
+                                <h3 class="text-2xl font-bold">124</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="bg-white shadow rounded-lg p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-gray-500">Défauts détectés</p>
-                                <p class="text-2xl font-semibold text-gray-900">3</p>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                                <i class="fas fa-times-circle text-xl"></i>
                             </div>
-                            <div class="p-3 rounded-full bg-red-100 text-red-600">
-                                <i class="fas fa-exclamation-triangle"></i>
+                            <div>
+                                <p class="text-gray-500">Tests échoués</p>
+                                <h3 class="text-2xl font-bold">8</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="bg-white shadow rounded-lg p-6">
-                        <div class="flex items-center justify-between">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                                <i class="fas fa-clock text-xl"></i>
+                            </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-500">Taux de réussite</p>
-                                <p class="text-2xl font-semibold text-gray-900">87.5%</p>
-                            </div>
-                            <div class="p-3 rounded-full bg-green-100 text-green-600">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-gray-500">Boîtiers testés</p>
-                                <p class="text-2xl font-semibold text-gray-900">156</p>
-                            </div>
-                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                                <i class="fas fa-cube"></i>
+                                <p class="text-gray-500">En attente</p>
+                                <h3 class="text-2xl font-bold">3</h3>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recent Tests and Charts -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Recent Tests -->
-                    <div class="bg-white shadow rounded-lg lg:col-span-2">
-                        <div class="p-6 border-b">
-                            <h2 class="text-lg font-medium text-gray-900">Tests récents</h2>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Test</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Boîtier</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">T-2456</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">B-7890</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10:45 Aujourd'hui</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <a href="#" class="text-blue-600 hover:text-blue-900">Voir</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">T-2455</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">B-7889</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10:30 Aujourd'hui</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Échec</span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <a href="#" class="text-blue-600 hover:text-blue-900">Voir</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">T-2454</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">B-7888</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10:15 Aujourd'hui</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <a href="#" class="text-blue-600 hover:text-blue-900">Voir</a>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="p-4 border-t text-center">
-                            <a href="#" class="text-sm text-blue-600 hover:underline">Voir tous les tests</a>
-                        </div>
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">Tests récents</h2>
+                        <a href="#" class="text-blue-600 hover:underline">Voir tout</a>
                     </div>
-
-                    <!-- Defects Chart -->
-                    <div class="bg-white shadow rounded-lg">
-                        <div class="p-6 border-b">
-                            <h2 class="text-lg font-medium text-gray-900">Types de défauts</h2>
-                        </div>
-                        <div class="p-6">
-                            <div class="chart-container">
-                                <canvas id="defectsChart"></canvas>
-                            </div>
-                        </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Boîtier</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">B-2023-0456</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Alimentation</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">15/06/2023</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-eye"></i></button>
+                                        <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-print"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">B-2023-0457</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Contrôle</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">15/06/2023</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Échoué</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-eye"></i></button>
+                                        <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-print"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">B-2023-0458</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Communication</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">14/06/2023</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-eye"></i></button>
+                                        <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-print"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Test Results and Export -->
-                <div class="bg-white shadow rounded-lg mb-8">
-                    <div class="p-6 border-b flex justify-between items-center">
-                        <h2 class="text-lg font-medium text-gray-900">Résultats des tests</h2>
-                        <div class="flex space-x-2">
-                            <button class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center">
-                                <i class="fas fa-filter mr-2"></i> Filtrer
-                            </button>
-                            <div class="relative">
-                                <button id="exportDropdownBtn" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center">
-                                    <i class="fas fa-download mr-2"></i> Exporter
-                                    <i class="fas fa-chevron-down ml-1 text-xs"></i>
-                                </button>
-                                <div id="exportDropdown" class="hidden absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10">
-                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">CSV</a>
-                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">PDF</a>
-                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Excel</a>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h2 class="text-lg font-semibold mb-4">Statistiques des tests</h2>
+                        <div class="h-64">
+                            <!-- Chart placeholder -->
+                            <div class="flex items-center justify-center h-full bg-gray-100 rounded">
+                                <p class="text-gray-500">Graphique des statistiques</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h2 class="text-lg font-semibold mb-4">Alertes récentes</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="p-2 rounded-full bg-red-100 text-red-600 mr-3">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Boîtier B-2023-0457 défectueux</p>
+                                    <p class="text-sm text-gray-500">Court-circuit détecté sur le circuit d'alimentation</p>
+                                    <p class="text-xs text-gray-400">Il y a 2 heures</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="p-2 rounded-full bg-yellow-100 text-yellow-600 mr-3">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Nouveau lot de boîtiers</p>
+                                    <p class="text-sm text-gray-500">15 nouveaux boîtiers à tester arrivés en stock</p>
+                                    <p class="text-xs text-gray-400">Aujourd'hui, 09:15</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="p-6">
-                        <div class="mb-4">
+                </div>
+            </div>
+
+            <!-- New Test Content -->
+            <div id="newTestContent" class="p-6 hidden">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <h2 class="text-xl font-semibold mb-6">Nouveau test de boîtier</h2>
+                    <form id="testForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="boxId" class="block text-gray-700 mb-2">ID du boîtier</label>
+                                <input type="text" id="boxId" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            </div>
+                            <div>
+                                <label for="boxType" class="block text-gray-700 mb-2">Type de boîtier</label>
+                                <select id="boxType" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    <option value="">Sélectionner un type</option>
+                                    <option value="alimentation">Alimentation</option>
+                                    <option value="controle">Contrôle</option>
+                                    <option value="communication">Communication</option>
+                                    <option value="interface">Interface</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-lg font-medium mb-4">Tests à effectuer</h3>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label for="testType" class="block text-sm font-medium text-gray-700 mb-1">Type de test</label>
-                                    <select id="testType" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                        <option>Tous</option>
-                                        <option>Fuites de tension</option>
-                                        <option>Courts-circuits</option>
-                                        <option>Résistances</option>
-                                    </select>
+                                <div class="test-card bg-gray-50 p-4 rounded-lg border border-gray-200 transition duration-200">
+                                    <div class="flex items-center mb-3">
+                                        <input type="checkbox" id="continuityTest" class="mr-2">
+                                        <label for="continuityTest" class="font-medium">Continuité</label>
+                                    </div>
+                                    <div id="continuityFields" class="hidden space-y-2">
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Résistance (Ω)</label>
+                                            <input type="number" class="w-full px-3 py-1 border rounded text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Statut</label>
+                                            <select class="w-full px-3 py-1 border rounded text-sm">
+                                                <option value="pass">Réussi</option>
+                                                <option value="fail">Échoué</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Période</label>
-                                    <select id="dateRange" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                        <option>Aujourd'hui</option>
-                                        <option>Cette semaine</option>
-                                        <option>Ce mois</option>
-                                        <option>Personnalisé</option>
-                                    </select>
+                                <div class="test-card bg-gray-50 p-4 rounded-lg border border-gray-200 transition duration-200">
+                                    <div class="flex items-center mb-3">
+                                        <input type="checkbox" id="shortCircuitTest" class="mr-2">
+                                        <label for="shortCircuitTest" class="font-medium">Court-circuit</label>
+                                    </div>
+                                    <div id="shortCircuitFields" class="hidden space-y-2">
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Résistance (Ω)</label>
+                                            <input type="number" class="w-full px-3 py-1 border rounded text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Statut</label>
+                                            <select class="w-full px-3 py-1 border rounded text-sm">
+                                                <option value="pass">Réussi</option>
+                                                <option value="fail">Échoué</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label for="pinNumber" class="block text-sm font-medium text-gray-700 mb-1">Numéro de broche</label>
-                                    <input type="text" id="pinNumber" placeholder="Toutes" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <div class="test-card bg-gray-50 p-4 rounded-lg border border-gray-200 transition duration-200">
+                                    <div class="flex items-center mb-3">
+                                        <input type="checkbox" id="voltageLeakTest" class="mr-2">
+                                        <label for="voltageLeakTest" class="font-medium">Fuite de tension</label>
+                                    </div>
+                                    <div id="voltageLeakFields" class="hidden space-y-2">
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Tension mesurée (V)</label>
+                                            <input type="number" step="0.01" class="w-full px-3 py-1 border rounded text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Statut</label>
+                                            <select class="w-full px-3 py-1 border rounded text-sm">
+                                                <option value="pass">Réussi</option>
+                                                <option value="fail">Échoué</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <div class="mb-6">
+                            <label for="testNotes" class="block text-gray-700 mb-2">Notes techniques</label>
+                            <textarea id="testNotes" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+
+                        <div class="mb-6">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="needsReplacement" class="mr-2">
+                                <label for="needsReplacement" class="font-medium">Nécessite un remplacement</label>
+                            </div>
+                            <div id="replacementFields" class="hidden mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="replacementReason" class="block text-sm text-gray-600">Raison</label>
+                                    <select id="replacementReason" class="w-full px-3 py-1 border rounded text-sm">
+                                        <option value="">Sélectionner une raison</option>
+                                        <option value="defective">Défectueux</option>
+                                        <option value="damaged">Endommagé</option>
+                                        <option value="obsolete">Obsolète</option>
+                                        <option value="other">Autre</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="replacementUrgency" class="block text-sm text-gray-600">Urgence</label>
+                                    <select id="replacementUrgency" class="w-full px-3 py-1 border rounded text-sm">
+                                        <option value="low">Faible</option>
+                                        <option value="medium">Moyenne</option>
+                                        <option value="high">Haute</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Enregistrer le test</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- History Content -->
+            <div id="historyContent" class="p-6 hidden">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold">Historique des tests</h2>
+                        <div class="flex space-x-3">
+                            <div class="relative">
+                                <input type="text" placeholder="Rechercher..." class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <select class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Tous les statuts</option>
+                                <option>Réussis</option>
+                                <option>Échoués</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Test</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Boîtier</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Technicien</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">T-2023-1024</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">B-2023-0457</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Contrôle</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">15/06/2023 14:30</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Dupont J.</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Échoué</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-eye"></i></button>
+                                        <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-print"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">T-2023-1023</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">B-2023-0456</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Alimentation</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">15/06/2023 11:15</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Martin L.</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-eye"></i></button>
+                                        <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-print"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">T-2023-1022</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">B-2023-0455</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Communication</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">14/06/2023 16:45</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">Dupont J.</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-eye"></i></button>
+                                        <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-print"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6 flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            Affichage de 1 à 3 sur 124 entrées
+                        </div>
+                        <div class="flex space-x-1">
+                            <button class="px-3 py-1 border rounded text-gray-700 hover:bg-gray-50">&laquo;</button>
+                            <button class="px-3 py-1 border rounded bg-blue-600 text-white">1</button>
+                            <button class="px-3 py-1 border rounded text-gray-700 hover:bg-gray-50">2</button>
+                            <button class="px-3 py-1 border rounded text-gray-700 hover:bg-gray-50">3</button>
+                            <button class="px-3 py-1 border rounded text-gray-700 hover:bg-gray-50">&raquo;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Content -->
+            <div id="reportsContent" class="p-6 hidden">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold">Génération de rapports</h2>
+                        <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+                            <i class="fas fa-file-export mr-2"></i> Exporter
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h3 class="text-lg font-medium text-blue-800 mb-3">Rapport journalier</h3>
+                            <p class="text-sm text-blue-600 mb-4">Génère un rapport des tests effectués aujourd'hui</p>
+                            <button class="w-full px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm">Générer</button>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <h3 class="text-lg font-medium text-purple-800 mb-3">Rapport hebdomadaire</h3>
+                            <p class="text-sm text-purple-600 mb-4">Résumé des tests de la semaine en cours</p>
+                            <button class="w-full px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm">Générer</button>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <h3 class="text-lg font-medium text-green-800 mb-3">Rapport mensuel</h3>
+                            <p class="text-sm text-green-600 mb-4">Statistiques complètes du mois</p>
+                            <button class="w-full px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm">Générer</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium mb-3">Rapports personnalisés</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <form>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
+                                        <input type="date" class="w-full px-3 py-2 border rounded-lg">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
+                                        <input type="date" class="w-full px-3 py-2 border rounded-lg">
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Type de boîtier</label>
+                                    <select class="w-full px-3 py-2 border rounded-lg" multiple>
+                                        <option>Alimentation</option>
+                                        <option>Contrôle</option>
+                                        <option>Communication</option>
+                                        <option>Interface</option>
+                                    </select>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="statusPass" class="mr-2">
+                                            <label for="statusPass">Réussis</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="statusFail" class="mr-2">
+                                            <label for="statusFail">Échoués</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 mr-2">Réinitialiser</button>
+                                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Générer le rapport</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-medium mb-3">Rapports archivés</h3>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Broche</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur mesurée</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur attendue</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Détails</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom du rapport</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Période</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Généré le</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Par</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#12</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Résistance</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">0.2 Ω</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4.7 Ω</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">Rapport hebdomadaire - S24</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">12/06 - 18/06/2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">18/06/2023 17:30</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">Martin L.</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Échec</span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <a href="#" class="text-blue-600 hover:text-blue-900">Analyse</a>
+                                            <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-download"></i></button>
+                                            <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-trash-alt"></i></button>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#15</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Tension</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5.1 V</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5.0 V</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">Rapport mensuel - Juin 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">01/06 - 30/06/2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">30/06/2023 18:00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">Dupont J.</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <a href="#" class="text-blue-600 hover:text-blue-900">Analyse</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#8</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Courant</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">0.0 mA</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">20.0 mA</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Échec</span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <a href="#" class="text-blue-600 hover:text-blue-900">Analyse</a>
+                                            <button class="text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-download"></i></button>
+                                            <button class="text-gray-600 hover:text-gray-900"><i class="fas fa-trash-alt"></i></button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -415,105 +618,239 @@
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
+
+            <!-- Settings Content -->
+            <div id="settingsContent" class="p-6 hidden">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <h2 class="text-xl font-semibold mb-6">Paramètres</h2>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-lg font-medium mb-4 border-b pb-2">Profil utilisateur</h3>
+                        <div class="flex items-center mb-6">
+                            <div class="mr-4">
+                                <div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                    <i class="fas fa-user text-3xl text-gray-500"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 mr-2">Changer la photo</button>
+                                <button class="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200">Supprimer</button>
+                            </div>
+                        </div>
+                        
+                        <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Nom</label>
+                                <input type="text" value="Dupont" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Prénom</label>
+                                <input type="text" value="Jean" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Email</label>
+                                <input type="email" value="j.dupont@entreprise.com" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Téléphone</label>
+                                <input type="tel" value="+33 6 12 34 56 78" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div class="md:col-span-2">
+                                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Mettre à jour le profil</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-lg font-medium mb-4 border-b pb-2">Sécurité</h3>
+                        <form>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Mot de passe actuel</label>
+                                <input type="password" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Nouveau mot de passe</label>
+                                <input type="password" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2">Confirmer le nouveau mot de passe</label>
+                                <input type="password" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Changer le mot de passe</button>
+                        </form>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium mb-4 border-b pb-2">Préférences</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">Mode sombre</p>
+                                    <p class="text-sm text-gray-500">Activez le thème sombre pour un confort visuel</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">Notifications</p>
+                                    <p class="text-sm text-gray-500">Recevez des notifications pour les nouveaux tests</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Login functionality
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        // Show login modal on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('loginModal').classList.remove('hidden');
             
-            // Simple validation
-            if (username && password) {
-                document.getElementById('loginPage').classList.add('hidden');
-                document.getElementById('appContainer').classList.remove('hidden');
-                document.getElementById('usernameDisplay').textContent = username;
+            // Simulate authentication
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
                 
-                // Initialize charts
-                initCharts();
-            } else {
-                alert('Veuillez entrer un nom d\'utilisateur et un mot de passe');
-            }
-        });
-
-        // Logout functionality
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            document.getElementById('loginPage').classList.remove('hidden');
-            document.getElementById('appContainer').classList.add('hidden');
-        });
-        
-        document.getElementById('logoutBtnMobile').addEventListener('click', function() {
-            document.getElementById('loginPage').classList.remove('hidden');
-            document.getElementById('appContainer').classList.add('hidden');
-        });
-
-        // Toggle sidebar on mobile
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
-            document.querySelector('.sidebar').classList.toggle('active');
-        });
-
-        // Toggle dropdowns
-        document.getElementById('notificationsBtn').addEventListener('click', function() {
-            document.getElementById('notificationsDropdown').classList.toggle('hidden');
-        });
-
-        document.getElementById('userMenuBtn').addEventListener('click', function() {
-            document.getElementById('userMenuDropdown').classList.toggle('hidden');
-        });
-
-        document.getElementById('exportDropdownBtn').addEventListener('click', function() {
-            document.getElementById('exportDropdown').classList.toggle('hidden');
-        });
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('#notificationsBtn')) {
-                document.getElementById('notificationsDropdown').classList.add('hidden');
-            }
-            
-            if (!event.target.closest('#userMenuBtn')) {
-                document.getElementById('userMenuDropdown').classList.add('hidden');
-            }
-            
-            if (!event.target.closest('#exportDropdownBtn')) {
-                document.getElementById('exportDropdown').classList.add('hidden');
-            }
-        });
-
-        // Initialize charts
-        function initCharts() {
-            // Defects Chart
-            const defectsCtx = document.getElementById('defectsChart').getContext('2d');
-            const defectsChart = new Chart(defectsCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Courts-circuits', 'Fuites de tension', 'Résistances incorrectes', 'Autres'],
-                    datasets: [{
-                        data: [12, 8, 5, 3],
-                        backgroundColor: [
-                            '#EF4444',
-                            '#3B82F6',
-                            '#F59E0B',
-                            '#10B981'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
+                // Show loading
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                
+                // Simulate API call
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    
+                    // For demo purposes, any non-empty password will work
+                    if(username && password) {
+                        document.getElementById('loginModal').classList.add('hidden');
+                        document.getElementById('usernameDisplay').textContent = username;
+                    } else {
+                        document.getElementById('loginError').classList.remove('hidden');
                     }
+                }, 1500);
+            });
+            
+            // Logout functionality
+            document.getElementById('logoutButton').addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('loginError').classList.add('hidden');
+            });
+            
+            // Toggle sidebar
+            document.getElementById('toggleSidebar').addEventListener('click', function() {
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
+                
+                if(sidebar.classList.contains('sidebar-expanded')) {
+                    sidebar.classList.remove('sidebar-expanded');
+                    sidebar.classList.add('sidebar-collapsed');
+                    mainContent.classList.add('md:ml-0');
+                    mainContent.classList.remove('ml-0');
+                    this.innerHTML = '<i class="fas fa-chevron-right mr-2"></i><span class="nav-text">Étendre</span>';
+                } else {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    sidebar.classList.add('sidebar-expanded');
+                    mainContent.classList.remove('md:ml-0');
+                    mainContent.classList.add('ml-0');
+                    this.innerHTML = '<i class="fas fa-chevron-left mr-2"></i><span class="nav-text">Réduire</span>';
                 }
             });
-        }
+            
+            // Mobile menu toggle
+            document.getElementById('mobileMenuButton').addEventListener('click', function() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('hidden');
+            });
+            
+            // Navigation menu
+            const navLinks = ['dashboardLink', 'newTestLink', 'historyLink', 'reportsLink', 'settingsLink'];
+            const contentSections = ['dashboardContent', 'newTestContent', 'historyContent', 'reportsContent', 'settingsContent'];
+            
+            navLinks.forEach((linkId, index) => {
+                document.getElementById(linkId).addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Update active nav item
+                    document.querySelectorAll('nav a').forEach(item => {
+                        item.classList.remove('bg-gray-700');
+                    });
+                    this.classList.add('bg-gray-700');
+                    
+                    // Update page title
+                    const pageTitle = this.querySelector('.nav-text').textContent;
+                    document.getElementById('pageTitle').textContent = pageTitle;
+                    
+                    // Show corresponding content
+                    contentSections.forEach(sectionId => {
+                        document.getElementById(sectionId).classList.add('hidden');
+                    });
+                    document.getElementById(contentSections[index]).classList.remove('hidden');
+                    
+                    // Close sidebar on mobile
+                    if(window.innerWidth < 768) {
+                        document.getElementById('sidebar').classList.add('hidden');
+                    }
+                });
+            });
+            
+            // Dropdown menus
+            document.getElementById('notificationsButton').addEventListener('click', function() {
+                document.getElementById('notificationsDropdown').classList.toggle('hidden');
+                document.getElementById('userMenuDropdown').classList.add('hidden');
+            });
+            
+            document.getElementById('userMenuButton').addEventListener('click', function() {
+                document.getElementById('userMenuDropdown').classList.toggle('hidden');
+                document.getElementById('notificationsDropdown').classList.add('hidden');
+            });
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                if(!e.target.closest('#notificationsButton') && !e.target.closest('#notificationsDropdown')) {
+                    document.getElementById('notificationsDropdown').classList.add('hidden');
+                }
+                
+                if(!e.target.closest('#userMenuButton') && !e.target.closest('#userMenuDropdown')) {
+                    document.getElementById('userMenuDropdown').classList.add('hidden');
+                }
+            });
+            
+            // Test form interactions
+            document.getElementById('continuityTest').addEventListener('change', function() {
+                document.getElementById('continuityFields').classList.toggle('hidden', !this.checked);
+            });
+            
+            document.getElementById('shortCircuitTest').addEventListener('change', function() {
+                document.getElementById('shortCircuitFields').classList.toggle('hidden', !this.checked);
+            });
+            
+            document.getElementById('voltageLeakTest').addEventListener('change', function() {
+                document.getElementById('voltageLeakFields').classList.toggle('hidden', !this.checked);
+            });
+            
+            document.getElementById('needsReplacement').addEventListener('change', function() {
+                document.getElementById('replacementFields').classList.toggle('hidden', !this.checked);
+            });
+            
+            // Form submission
+            document.getElementById('testForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Test enregistré avec succès!');
+                // In a real app, you would send data to the backend here
+            });
+        });
     </script>
 </body>
 </html>
